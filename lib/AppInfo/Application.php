@@ -62,6 +62,9 @@ class Application extends App implements IBootstrap {
         
         // Register middleware (critical for download tracking via stream endpoint)
         $context->registerMiddleware(DownloadTrackingMiddleware::class);
+
+        \OCP\Util::addScript('transfer_quota_monitor', 'user');
+        \OCP\Util::addStyle('transfer_quota_monitor', 'user');
     }
 
 	public function boot(IBootContext $context): void {

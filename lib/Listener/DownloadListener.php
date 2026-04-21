@@ -75,8 +75,6 @@ class DownloadListener implements IEventListener {
                                          ->setSubject('quota_exceeded');
                             \OC::$server->get(\OCP\Notification\IManager::class)->notify($notification);
                         } catch (\Exception $e) {}
-
-                        // 2. Utiliser une exception propre qui est souvent respectée en lecture
                         throw new \OCP\Files\StorageNotAvailableException('Impossible : quota excedeed.');
                     }
                 }

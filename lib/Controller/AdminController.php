@@ -126,4 +126,15 @@ class AdminController extends Controller {
             'success' => $success
         ]);
     }
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function getCurrentUserQuota() {
+        $user = \OC::$server->getUserSession()->getUser();
+        if (!$user) {
+            return new \OCP\AppFramework\Http\JSONResponse([], \OCP\AppFramework\Http::STATUS_FORBIDDEN);
+        }
+        return new \OCP\AppFramework\Http\JSONResponse($this->quotaService->getUserQuota($user->getUID()));
+    }
 }

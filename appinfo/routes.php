@@ -12,6 +12,7 @@ declare(strict_types=1);
 return [
     'routes' => [
         ['name' => 'admin#getQuotas', 'url' => '/admin/quotas', 'verb' => 'GET'],
+        ['name' => 'admin#getCurrentUserQuota', 'url' => '/quota/self', 'verb' => 'GET'],
         ['name' => 'admin#setQuota', 'url' => '/admin/quota', 'verb' => 'POST'],
         ['name' => 'admin#setThresholds', 'url' => '/admin/thresholds', 'verb' => 'POST'],
         ['name' => 'admin#resetUserUsage', 'url' => '/admin/reset', 'verb' => 'POST'],
