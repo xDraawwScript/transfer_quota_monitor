@@ -32,7 +32,6 @@ class AdminController extends Controller {
     }
 
     /**
-     * @NoAdminRequired
      * @return JSONResponse
      */
     public function getQuotas() {
@@ -69,7 +68,6 @@ class AdminController extends Controller {
     }
 
     /**
-     * @NoAdminRequired
      * @param string $userId
      * @param int $quota in GiB
      * @return JSONResponse
@@ -89,7 +87,6 @@ class AdminController extends Controller {
     }
 
     /**
-     * @NoAdminRequired
      * @param int $warning
      * @param int $critical
      * @return JSONResponse
@@ -114,7 +111,6 @@ class AdminController extends Controller {
     }
 
     /**
-     * @NoAdminRequired
      * @param string $userId
      * @return JSONResponse
      */

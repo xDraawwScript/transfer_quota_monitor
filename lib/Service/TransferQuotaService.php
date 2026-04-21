@@ -121,7 +121,7 @@ class TransferQuotaService {
             'userId' => $userId,
             'limit' => 0,
             'usage' => 0,
-            'lastReset' => 'Jamais (Aucun quota)',
+            'lastReset' => 'Never (any quota)',
             'warningSent' => 0,
             'criticalWarningSent' => 0
         ];
