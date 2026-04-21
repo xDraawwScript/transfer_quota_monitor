@@ -13,7 +13,7 @@ use Psr\Log\LoggerInterface;
 /**
  * Reset all user transfer quotas on the first day of each month
  */
-class MonthlyReset extends TimedJob {
+class DailyReset extends TimedJob {
     /** @var TransferQuotaService */
     private $quotaService;
     
@@ -52,10 +52,6 @@ class MonthlyReset extends TimedJob {
      * @param array $argument
      */
     protected function run($argument) {
-        // Check if it's the first day of the month
-        $currentDay = (int)date('j');
-        
-        if ($currentDay === 1) {
             try {
                 if ($this->logger) {
                     $this->logger->info('Running monthly transfer quota reset');
@@ -74,7 +70,6 @@ class MonthlyReset extends TimedJob {
                         'app' => 'transfer_quota_monitor',
                         'exception' => $e
                     ]);
-                }
             }
         }
     }

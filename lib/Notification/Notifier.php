@@ -68,19 +68,19 @@ class Notifier implements INotifier {
             $threshold = $parameters['threshold'];
 
             $notification->setParsedSubject(
-                $l->t('You have reached %d%% of your monthly data transfer limit', [
+                $l->t('You have reached %d%% of your daily data transfer limit', [
                     $percentage
                 ])
             );
 
             $notification->setRichSubject(
-                $l->t('You have reached **%d%%** of your monthly data transfer limit', [
+                $l->t('You have reached **%d%%** of your daily data transfer limit', [
                     $percentage
                 ])
             );
 
             $notification->setParsedMessage(
-                $l->t('You may experience service limitations if you exceed your monthly transfer quota. Please consider reducing your data transfers until the quota resets next month.')
+                $l->t('You may experience service limitations if you exceed your daily transfer quota. Please consider reducing your data transfers until the quota resets next month.')
             );
 
             $filesUrl = $this->urlGenerator->linkToRouteAbsolute('files.view.index');
@@ -91,19 +91,33 @@ class Notifier implements INotifier {
             $threshold = $parameters['threshold'];
 
             $notification->setParsedSubject(
-                $l->t('CRITICAL: You have reached %d%% of your monthly data transfer limit', [
+                $l->t('CRITICAL: You have reached %d%% of your daily data transfer limit', [
                     $percentage
                 ])
             );
 
             $notification->setRichSubject(
-                $l->t('**CRITICAL**: You have reached **%d%%** of your monthly data transfer limit', [
+                $l->t('**CRITICAL**: You have reached **%d%%** of your daily data transfer limit', [
                     $percentage
                 ])
             );
 
             $notification->setParsedMessage(
-                $l->t('You are close to exceeding your monthly transfer quota. Once you reach 100%%, your ability to upload and download files may be severely restricted until the quota resets next month.')
+                $l->t('You are close to exceeding your daily transfer quota. Once you reach 100%%, your ability to upload and download files may be severely restricted until the quota resets next month.')
+            );
+            $filesUrl = $this->urlGenerator->linkToRouteAbsolute('files.view.index');
+            $notification->setLink($filesUrl);
+        } elseif ($notification->getSubject() === 'quota_exceeded') {
+            $notification->setParsedSubject(
+                $l->t('Impossible : quota exceeded.')
+            );
+
+            $notification->setRichSubject(
+                $l->t('Impossible : quota exceeded.')
+            );
+
+            $notification->setParsedMessage(
+                $l->t('Quota excedeed, impossible to download until next reset.')
             );
 
             $filesUrl = $this->urlGenerator->linkToRouteAbsolute('files.view.index');

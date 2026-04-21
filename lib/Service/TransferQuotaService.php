@@ -121,7 +121,7 @@ class TransferQuotaService {
             'userId' => $userId,
             'limit' => 0,
             'usage' => 0,
-            'lastReset' => date('Y-m-d H:i:s'),
+            'lastReset' => 'Jamais (Aucun quota)',
             'warningSent' => 0,
             'criticalWarningSent' => 0
         ];
@@ -411,5 +411,35 @@ class TransferQuotaService {
                      ]);
         
         $this->notificationManager->notify($notification);
+    }
+    private function sendExceededNotification(string $userId) {
+        try {
+            $notification = $this->notificationManager->createNotification();
+            $notification->setApp($this->appName)
+                         ->setUser($userId)
+                         ->setDateTime(new \DateTime())
+                         ->setObject('transfer_quota', $userId)
+                         ->setSubject('quota_exceeded');
+            
+            $this->notificationManager->notify($notification);
+        } catch (\Exception $e) {
+            $this->logger->error('Error sending exceeded notification: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Look if quota exceeded
+     */
+    public function isQuotaExceeded(string $userId, int $pendingBytes = 0): bool {
+        $quota = $this->getUserQuota($userId);
+        if (!$quota || $quota['limit'] === 0) {
+            return false;
+        }
+        $exceeded = ($quota['usage'] + $pendingBytes) > $quota['limit'];
+        if ($exceeded) {
+            $this->sendExceededNotification($userId);
+        }
+        
+        return $exceeded;
     }
 }

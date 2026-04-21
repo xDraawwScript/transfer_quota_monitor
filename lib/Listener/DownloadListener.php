@@ -58,8 +58,18 @@ class DownloadListener implements IEventListener {
     public function handle(Event $event): void {
         // Track file downloads
         if ($event instanceof BeforeNodeReadEvent) {
-            if ($event->getNode() instanceof File) {
-                $this->processFileDownload($event->getNode());
+            $node = $event->getNode();
+            if ($node instanceof File) {
+                $user = $this->userSession->getUser();
+                if ($user) {
+                    $userId = $user->getUID();
+                    $fileSize = $node->getSize();
+                    if ($this->quotaService->isQuotaExceeded($userId, $fileSize)) {
+                        $this->logger->warning('Download blocked, limit excedeed for ' . $userId);
+                        throw new \OCP\Files\ForbiddenException('Impossible, you exceeded your daily limit');
+                    }
+                }
+                $this->processFileDownload($node);
             }
         }
 

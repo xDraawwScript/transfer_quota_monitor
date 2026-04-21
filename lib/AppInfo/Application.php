@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\TransferQuotaMonitor\AppInfo;
 
-use OCA\TransferQuotaMonitor\Cron\MonthlyReset;
+use OCA\TransferQuotaMonitor\Cron\DailyReset;
 use OCA\TransferQuotaMonitor\Cron\UsageTrackingJob;
 use OCA\TransferQuotaMonitor\Listener\DownloadListener;
 use OCA\TransferQuotaMonitor\Listener\FileOperationListener;
@@ -41,10 +41,14 @@ class Application extends App implements IBootstrap {
 
 	public function register(IRegistrationContext $context): void {
         // Register file operation event handlers for uploads
+        $context->registerEventListener(\OCP\Files\Events\Node\BeforeNodeCreatedEvent::class, FileOperationListener::class);
+        $context->registerEventListener(\OCP\Files\Events\Node\BeforeNodeWrittenEvent::class, FileOperationListener::class);
+        // -------------------------------------------------
         $context->registerEventListener(NodeCreatedEvent::class, FileOperationListener::class);
         $context->registerEventListener(NodeWrittenEvent::class, FileOperationListener::class);
         
         // Register DIRECT download tracking event listeners (critical for direct download tracking)
+        
         $context->registerEventListener(\OCP\Files\Events\Node\BeforeNodeReadEvent::class, DownloadListener::class);
         $context->registerEventListener(\OCP\Preview\BeforePreviewFetchedEvent::class, DownloadListener::class);
         
@@ -67,7 +71,7 @@ class Application extends App implements IBootstrap {
         // Register background jobs
         $context->injectFn(function(IJobList $jobList) {
             $jobList->add(UsageTrackingJob::class);
-            $jobList->add(MonthlyReset::class);
+            $jobList->add(DailyReset::class);
         });
     }
 }

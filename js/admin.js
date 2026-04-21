@@ -104,9 +104,8 @@
                             })
                         ));
                         
-                        // Calculate GB from bytes and round to nearest whole number
-                        var usageGB = Math.round(quota.usage / (1024*1024*1024));
-                        tr.append($('<td>').text(usageGB));
+                        var usageGB = (quota.usage / (1024*1024*1024)).toFixed(4);
+                        tr.append($('<td>').text(usageGB + ' GB'));
                         
                         tr.append($('<td>').text(quota.lastReset));
                         tr.append($('<td>').append(
