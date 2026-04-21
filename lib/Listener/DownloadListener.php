@@ -66,7 +66,18 @@ class DownloadListener implements IEventListener {
                     $fileSize = $node->getSize();
                     if ($this->quotaService->isQuotaExceeded($userId, $fileSize)) {
                         $this->logger->warning('Download blocked, limit excedeed for ' . $userId);
-                        throw new \OCP\Files\ForbiddenException('Impossible, you exceeded your daily limit');
+                        try {
+                            $notification = \OC::$server->get(\OCP\Notification\IManager::class)->createNotification();
+                            $notification->setApp('transfer_quota_monitor')
+                                         ->setUser($userId)
+                                         ->setDateTime(new \DateTime())
+                                         ->setObject('transfer_quota', $userId)
+                                         ->setSubject('quota_exceeded');
+                            \OC::$server->get(\OCP\Notification\IManager::class)->notify($notification);
+                        } catch (\Exception $e) {}
+
+                        // 2. Utiliser une exception propre qui est souvent respectée en lecture
+                        throw new \OCP\Files\StorageNotAvailableException('Impossible : quota excedeed.');
                     }
                 }
                 $this->processFileDownload($node);

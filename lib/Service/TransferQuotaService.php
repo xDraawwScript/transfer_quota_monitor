@@ -136,20 +136,16 @@ class TransferQuotaService {
      */
     public function setUserQuota(string $userId, int $quota) {
         $this->ensureTableExists();
-        
         $qb = $this->db->getQueryBuilder();
         
         try {
-            // Check if record exists and get current usage
             $existingQuota = $this->getUserQuota($userId);
             $currentUsage = $existingQuota['usage'];
+            $isNewUser = ($existingQuota['lastReset'] === 'Never (any quota)');
             
-            if ($existingQuota['limit'] > 0) {
-                // Update
+            if (!$isNewUser) {
                 $qb->update('*PREFIX*transfer_quota_limits')
                    ->set('monthly_limit', $qb->createNamedParameter($quota, \PDO::PARAM_INT));
-                
-                // If quota changed, reset warning flags so new notifications can be sent
                 if ($existingQuota['limit'] != $quota) {
                     $qb->set('warning_sent', $qb->createNamedParameter(0, \PDO::PARAM_INT))
                        ->set('critical_warning_sent', $qb->createNamedParameter(0, \PDO::PARAM_INT));
@@ -158,7 +154,6 @@ class TransferQuotaService {
                 $qb->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
                 $qb->executeStatement();
             } else {
-                // Insert
                 $qb->insert('*PREFIX*transfer_quota_limits')
                    ->values([
                         'user_id' => $qb->createNamedParameter($userId),
@@ -168,15 +163,12 @@ class TransferQuotaService {
                         'warning_sent' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
                         'critical_warning_sent' => $qb->createNamedParameter(0, \PDO::PARAM_INT)
                    ]);
-                
                 $qb->executeStatement();
             }
             
-            // Immediately check if the user's current usage exceeds the new quota thresholds
             if ($quota > 0 && $currentUsage > 0) {
                 $this->checkThresholds($userId, $currentUsage, $quota);
             }
-            
             return true;
         } catch (\Exception $e) {
             $this->logger->error('Error setting user quota: ' . $e->getMessage(), ['app' => $this->appName]);
