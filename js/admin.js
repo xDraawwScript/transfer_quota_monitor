@@ -74,6 +74,40 @@
                 }
             });
         },
+        // Setup sliders for thresholds
+        _initSliders: function() {
+            var $warningInput = $('#warning_threshold'); 
+            var $criticalInput = $('#critical_threshold');
+            function createSlider($input) {
+                if ($input.length === 0) return;
+                if ($input.next('input[type="range"]').length > 0) {
+                    $input.next('input[type="range"]').val($input.val()).trigger('input');
+                    return;
+                }
+                var val = $input.val();
+                $input.hide();
+                var $slider=$('<input type="range" min="1" max="100" style="width: 200px; vertical-align: middle; cursor: pointer;">').val(val);
+                var $display=$('<span style="display:inline-block; width: 55px; font-weight:bold; margin-left: 15px; font-size: 1.1em; transition: color 0.3s;">').text(val + '%');
+
+                var updateUI = function(value) {
+                    $display.text(value + '%');
+                    var color = '#10b981';
+                    if (value >= 90) color = '#ef4444';
+                    else if (value >= 70) color = '#f59e0b';
+                    $display.css('color', color);
+                };
+                updateUI(val);
+                $slider.on('input', function() {
+                    updateUI($(this).val());
+                });
+                $slider.on('change', function() {
+                    $input.val($(this).val()).trigger('change');
+                });
+                $input.after($display).after($slider);
+            }
+            createSlider($warningInput);
+            createSlider($criticalInput);
+        },
 
         // Load user quotas
         loadUserQuotas: function() {
@@ -90,7 +124,7 @@
                     // Set threshold inputs
                     $('#warning_threshold').val(response.warning_threshold);
                     $('#critical_threshold').val(response.critical_threshold);
-                    
+                    self._initSliders();
                     response.quotas.forEach(function(quota) {
                         var tr = $('<tr>');
                         tr.append($('<td>').text(quota.displayName));
