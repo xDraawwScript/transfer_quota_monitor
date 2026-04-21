@@ -159,7 +159,7 @@ class TransferQuotaService {
                         'user_id' => $qb->createNamedParameter($userId),
                         'monthly_limit' => $qb->createNamedParameter($quota, \PDO::PARAM_INT),
                         'current_usage' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
-                        'last_reset' => $qb->createNamedParameter(date('Y-m-d H:i:s')),
+                        'last_reset' => $qb->createNamedParameter((new \DateTime('now', new \DateTimeZone('Europe/Paris')))->format('Y-m-d H:i:s')),
                         'warning_sent' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
                         'critical_warning_sent' => $qb->createNamedParameter(0, \PDO::PARAM_INT)
                    ]);
@@ -259,7 +259,7 @@ class TransferQuotaService {
         try {
             $qb->update('*PREFIX*transfer_quota_limits')
                ->set('current_usage', $qb->createNamedParameter(0, \PDO::PARAM_INT))
-               ->set('last_reset', $qb->createNamedParameter(date('Y-m-d H:i:s')))
+               ->set('last_reset', $qb->createNamedParameter((new \DateTime('now', new \DateTimeZone('Europe/Paris')))->format('Y-m-d H:i:s')))
                ->set('warning_sent', $qb->createNamedParameter(0, \PDO::PARAM_INT))
                ->set('critical_warning_sent', $qb->createNamedParameter(0, \PDO::PARAM_INT))
                ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
@@ -286,7 +286,7 @@ class TransferQuotaService {
         try {
             $qb->update('*PREFIX*transfer_quota_limits')
                ->set('current_usage', $qb->createNamedParameter(0, \PDO::PARAM_INT))
-               ->set('last_reset', $qb->createNamedParameter(date('Y-m-d H:i:s')))
+               ->set('last_reset', $qb->createNamedParameter((new \DateTime('now', new \DateTimeZone('Europe/Paris')))->format('Y-m-d H:i:s')))
                ->set('warning_sent', $qb->createNamedParameter(0, \PDO::PARAM_INT))
                ->set('critical_warning_sent', $qb->createNamedParameter(0, \PDO::PARAM_INT));
             
