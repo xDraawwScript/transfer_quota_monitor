@@ -96,16 +96,61 @@
                         tr.append($('<td>').text(quota.displayName));
                         
                         // Calculate GB from bytes and round to nearest whole number
-                        var quotaGB = Math.round(quota.limit / (1024*1024*1024));
-                        
-                        tr.append($('<td>').append(
-                            $('<input type="number" min="0" step="1">').val(quotaGB).data('user-id', quota.userId).on('change', function() {
-                                self._saveUserQuota(quota.userId, $(this).val());
+                        // Calcul exact en Go
+                        var quotaGB = quota.limit / (1024 * 1024 * 1024);
+                        var usageGB = quota.usage / (1024 * 1024 * 1024);
+
+                        var inputField = $('<input type="number" min="0" step="1" title="Mettre 0 pour illimité">')
+                            .css({
+                                width: '75px',
+                                textAlign: 'right',
+                                padding: '6px',
+                                border: '1px solid var(--color-border, #ccc)',
+                                borderRadius: '4px',
+                                backgroundColor: 'var(--color-main-background, #fff)',
+                                color: 'var(--color-main-text, #000)'
                             })
-                        ));
+                            .val(Math.round(quotaGB))
+                            .data('user-id', quota.userId)
+                            .on('change', function() {
+                                self._saveUserQuota(quota.userId, $(this).val());
+                            });
+
+                        var limitWrapper = $('<div>')
+                            .css({ display: 'flex', alignItems: 'center', gap: '8px' })
+                            .append(inputField)
+                            .append($('<span>').css({ 
+                                color: 'var(--color-text-maxcontrast, #888)', 
+                                fontWeight: 'bold', 
+                                fontSize: '0.9em' 
+                            }).text('GB'));
                         
-                        var usageGB = (quota.usage / (1024*1024*1024)).toFixed(4);
-                        tr.append($('<td>').text(usageGB + ' GB'));
+                        tr.append($('<td>').append(limitWrapper));
+                        var percent = quotaGB > 0 ? (usageGB / quotaGB)*100 : 0;
+                        var color = '#10b981';
+                        var warningThresh = response.warning_threshold ||80;
+                        var criticalThresh = response.critical_threshold || 95;
+
+                        if (percent >= criticalThresh) {
+                            color = '#ef4444';
+                        } else if (percent >= warningThresh) {
+                            color = '#f59e0b';
+                        }
+                        if (quotaGB === 0) {
+                            color = 'var(--color-text-maxcontrast, #ccc)';
+                            percent = 100;
+                        }
+                        var progressHtml = `
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="flex-grow:1; background-color:var(--color-background-dark, #e2e8f0); border-radius:4px; height:10px; width:150px; overflow:hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);">
+                                    <div style="width:${Math.min(percent, 100)}%; background-color:${color}; height:100%; transition: width 0.3s ease;"></div>
+                                </div>
+                                <span style="min-width:70px; font-weight:bold; color:${color}; font-size:0.95em;">
+                                    ${usageGB.toFixed(2)} GB
+                                </span>
+                            </div>
+                        `;
+                        tr.append($('<td>').html(progressHtml));
                         
                         tr.append($('<td>').text(quota.lastReset));
                         tr.append($('<td>').append(

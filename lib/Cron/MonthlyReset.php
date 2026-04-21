@@ -54,19 +54,19 @@ class DailyReset extends TimedJob {
     protected function run($argument) {
             try {
                 if ($this->logger) {
-                    $this->logger->info('Running monthly transfer quota reset');
+                    $this->logger->info('Running daily transfer quota reset');
                 }
                 
                 if ($this->quotaService) {
                     $success = $this->quotaService->resetAllUsage();
                     
                     if ($this->logger) {
-                        $this->logger->info('Monthly transfer quota reset ' . ($success ? 'completed successfully' : 'failed'));
+                        $this->logger->info('daily transfer quota reset ' . ($success ? 'completed successfully' : 'failed'));
                     }
                 }
             } catch (\Exception $e) {
                 if ($this->logger) {
-                    $this->logger->error('Error during monthly transfer quota reset: ' . $e->getMessage(), [
+                    $this->logger->error('Error during daily transfer quota reset: ' . $e->getMessage(), [
                         'app' => 'transfer_quota_monitor',
                         'exception' => $e
                     ]);

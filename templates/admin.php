@@ -41,14 +41,14 @@ style('transfer_quota_monitor', 'admin');
     <div class="quota-user-limits">
         <h3><?php p($l->t('User Transfer Limits')); ?></h3>
         <p class="settings-hint">
-            <?php p($l->t('Set monthly data transfer limits for users. Users will receive notifications when they reach the warning thresholds.')); ?>
+            <?php p($l->t('Set daily data transfer limits for users. Users will receive notifications when they reach the warning thresholds.')); ?>
         </p>
         
         <table id="transfer_quota_limits" class="grid">
             <thead>
                 <tr>
                     <th><?php p($l->t('User')); ?></th>
-                    <th><?php p($l->t('Monthly Limit (GB)')); ?></th>
+                    <th><?php p($l->t('Daily Limit (GB)')); ?></th>
                     <th><?php p($l->t('Current Usage (GB)')); ?></th>
                     <th><?php p($l->t('Last Reset')); ?></th>
                     <th><?php p($l->t('Actions')); ?></th>

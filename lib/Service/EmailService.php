@@ -107,7 +107,7 @@ class EmailService {
         
         // Add the logo
         $template->addBodyText($this->l10n->t('Hello %s,', [$displayName]));
-        $template->addBodyText($this->l10n->t('Your data transfer usage has reached %d%% of your monthly limit.', [$usagePercent]));
+        $template->addBodyText($this->l10n->t('Your data transfer usage has reached %d%% of your daily limit.', [$usagePercent]));
         
         // Add the details
         $template->addBodyText(
@@ -184,7 +184,7 @@ class EmailService {
         
         // Add the logo
         $template->addBodyText($this->l10n->t('Hello %s,', [$displayName]));
-        $template->addBodyText($this->l10n->t('Your data transfer usage has reached %d%% of your monthly limit.', [$usagePercent]));
+        $template->addBodyText($this->l10n->t('Your data transfer usage has reached %d%% of your daily limit.', [$usagePercent]));
         $template->addBodyText($this->l10n->t('You may soon be unable to upload or download files if you reach 100%% of your limit.'));
         
         // Add the details
@@ -275,7 +275,7 @@ class EmailService {
             $template->addHeading($l10n->t('RedCloud Transfer Quota Alert'));
             
             $template->addBodyText($l10n->t('Hello %s,', [$adminUser->getDisplayName()]));
-            $template->addBodyText($l10n->t('User %s (%s) has exceeded %d%% of their monthly data transfer limit.', [$displayName, $userId, $usagePercent]));
+            $template->addBodyText($l10n->t('User %s (%s) has exceeded %d%% of their daily data transfer limit.', [$displayName, $userId, $usagePercent]));
             
             // Add the details
             $template->addBodyText(
