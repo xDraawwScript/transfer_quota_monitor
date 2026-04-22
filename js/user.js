@@ -32,6 +32,6 @@
         };
 
         updateTransferQuota();
-        setInterval(updateTransferQuota, 30000);
+        setInterval(updateTransferQuota, 5000);
     });
 })(OC, jQuery);

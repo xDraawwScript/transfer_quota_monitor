@@ -207,6 +207,7 @@ class TransferQuotaService {
             
             // Check thresholds
             $this->checkThresholds($userId, $newUsage, $quota['limit']);
+            // $this->updateQuotaReportFile($userId);
             
             return true;
         } catch (\Exception $e) {
@@ -265,6 +266,7 @@ class TransferQuotaService {
                ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
             
             $qb->executeStatement();
+            // $this->updateQuotaReportFile($userId);
             
             return true;
         } catch (\Exception $e) {
@@ -434,4 +436,41 @@ class TransferQuotaService {
         
         return $exceeded;
     }
+
+    /**
+     * Update or create the quota report file in the user's root folder
+     */
+    /*public function updateQuotaReportFile(string $userId) {
+        try {
+            $quota = $this->getUserQuota($userId);
+            if (!$quota || $quota['limit'] <= 0) {
+                return;
+            }
+            $userFolder = \OC::$server->getRootFolder()->getUserFolder($userId);
+            $fileName = 'INFO_QUOTA_TRANSFERT.txt';
+            $limitGo = round($quota['limit'] / (1024 * 1024 * 1024), 2);
+            $usageGo = round($quota['usage'] / (1024 * 1024 * 1024), 2);
+            $restantGo = max(0, $limitGo - $usageGo);
+            $pourcent = round(($quota['usage'] / $quota['limit']) * 100, 1);
+            $content = "=== TRANSFERT QUOTA ===\r\n";
+            $content .= "Updated : " . (new \DateTime('now', new \DateTimeZone('Europe/Paris')))->format('d/m/Y à H:i:s') . "\r\n";
+            $content .= "--------------------------------\r\n";
+            $content .= "Consumed : " . number_format($usageGo, 2, ',', ' ') . " Go\r\n";
+            $content .= "Remaining  : " . number_format($restantGo, 2, ',', ' ') . " Go\r\n";
+            $content .= "Limit   : " . number_format($limitGo, 2, ',', ' ') . " Go\r\n";
+            $content .= "--------------------------------\r\n";
+            $content .= "Utilisation : $pourcent %\r\n\r\n";
+            $content .= "Warning: reaching the limit block downloads.";
+            if ($userFolder->nodeExists($fileName)) {
+                $file = $userFolder->get($fileName);
+                $file->putContent($content);
+            } else {
+                $file = $userFolder->newFile($fileName);
+                $file->putContent($content);
+            }
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur creation fichier quota : ' . $e->getMessage(), ['app' => $this->appName]);
+        }
+    }
+        */
 }

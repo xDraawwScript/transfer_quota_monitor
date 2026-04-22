@@ -14,25 +14,13 @@ use OCP\IUserSession;
 use OCP\Preview\BeforePreviewFetchedEvent;
 use Psr\Log\LoggerInterface;
 
-class DownloadListener implements IEventListener {
-    /** @var IUserSession */
-    protected $userSession;
 
-    /** @var IDBConnection */
+class DownloadListener implements IEventListener {
+    protected $userSession;
     protected $connection;
-    
-    /** @var TransferQuotaService */
     protected $quotaService;
-    
-    /** @var LoggerInterface */
     protected $logger;
 
-    /**
-     * @param IUserSession $userSession
-     * @param IDBConnection $connection
-     * @param TransferQuotaService $quotaService
-     * @param LoggerInterface $logger
-     */
     public function __construct(
         IUserSession $userSession,
         IDBConnection $connection,
@@ -45,71 +33,59 @@ class DownloadListener implements IEventListener {
         $this->logger = $logger;
     }
 
-    /**
-     * Event handler
-     * 
-     * @param Event $event
-     */
     public function handle(Event $event): void {
-        // Track file downloads
         if ($event instanceof BeforeNodeReadEvent) {
             $node = $event->getNode();
             if ($node instanceof File) {
                 $user = $this->userSession->getUser();
-                if ($user) {
-                    $userId = $user->getUID();
-                    $fileSize = $node->getSize();
-                    if ($this->quotaService->isQuotaExceeded($userId, $fileSize)) {
-                        $this->logger->warning('Download blocked, limit excedeed for ' . $userId);
-                        try {
-                            $notification = \OC::$server->get(\OCP\Notification\IManager::class)->createNotification();
-                            $notification->setApp('transfer_quota_monitor')
-                                         ->setUser($userId)
-                                         ->setDateTime(new \DateTime())
-                                         ->setObject('transfer_quota', $userId)
-                                         ->setSubject('quota_exceeded');
-                            \OC::$server->get(\OCP\Notification\IManager::class)->notify($notification);
-                        } catch (\Exception $e) {}
-                        throw new \OCP\Files\StorageNotAvailableException('Impossible : quota excedeed.');
+                $userId = $user ? $user->getUID() : null;
+                if (!$userId) {
+                    $owner = $node->getOwner();
+                    if ($owner) {
+                        $userId = $owner->getUID();
                     }
                 }
-                $this->processFileDownload($node);
+                if ($userId) {
+                    $fileSize = $node->getSize();
+                    $request = \OC::$server->getRequest();
+                    if ($request->getMethod() === 'PROPFIND') {
+                        return;
+                    }
+                    // ignore video streaming requests
+                    $range = $request->getHeader('Range');
+                    if (!empty($range) && strpos($range, 'bytes=0-')===false) {
+                        return;
+                    }
+                    
+                    // anti spam filter to prevent multiple counts for the same download in a short time frame
+                    $cache = \OC::$server->get(\OCP\ICacheFactory::class)->createDistributed('transfer_quota');
+                    $cacheKey = 'dl_lock_' . $userId . '_' . $node->getId();
+                    if ($cache->get($cacheKey) === true) {
+                        return; 
+                    }
+                    if ($this->quotaService->isQuotaExceeded($userId, $fileSize)) {
+                        $this->logger->warning('Download blocked, limit exceeded for ' . $userId);
+                        throw new \OCP\Files\StorageNotAvailableException('transfer quota exceeded');
+                    }
+                    $cache->set($cacheKey, true, 30);
+                    $this->processFileDownload($node, $userId);
+                }
             }
         }
-
-        // Also track large preview generations as downloads
         if ($event instanceof BeforePreviewFetchedEvent && ($event->getHeight() > 256 || $event->getWidth() > 256)) {
-            $this->logDownload();
+            $this->logDownload(null);
         }
     }
 
-    /**
-     * Process a file download and account for the download size
-     *
-     * @param File $file The downloaded file
-     */
-    protected function processFileDownload(File $file): void {
+    protected function processFileDownload(File $file, string $userId): void {
         try {
-            $user = $this->userSession->getUser();
-            if (!$user) {
-                return; // Skip if no user is logged in
-            }
-            
-            $userId = $user->getUID();
             $fileSize = $file->getSize();
             $filePath = $file->getPath();
-            
-            // Log the download event
-            $this->logger->info('File download detected: ' . $filePath . ' (' . $fileSize . ' bytes) by user ' . $userId, [
+            $this->logger->info('File download detected via WebDAV/Web: ' . $filePath . ' (' . $fileSize . ' bytes) by user ' . $userId, [
                 'app' => 'transfer_quota_monitor'
             ]);
-            
-            // Add the file size to the user's transfer quota
             $this->quotaService->addUserTransfer($userId, $fileSize);
-            
-            // Also increment our internal counter
-            $this->logDownload();
-            
+            $this->logDownload($userId);
         } catch (\Exception $e) {
             $this->logger->error('Error processing file download: ' . $e->getMessage(), [
                 'app' => 'transfer_quota_monitor',
@@ -118,22 +94,14 @@ class DownloadListener implements IEventListener {
         }
     }
     
-    /**
-     * Log a download in our own counter
-     */
-    protected function logDownload(): void {
-        $user = $this->userSession->getUser();
-        if (!$user) {
-            return; // Skip if no user is logged in
+    protected function logDownload(?string $userId = null): void {
+        if (!$userId) {
+            $user = $this->userSession->getUser();
+            if (!$user) return; 
+            $userId = $user->getUID();
         }
         
         try {
-            $userId = $user->getUID();
-            
-            // First try to update existing record
-            $query = $this->connection->getQueryBuilder();
-            
-            // First get the current value to properly handle the type conversion
             $selectQuery = $this->connection->getQueryBuilder();
             $selectQuery->select('configvalue')
                 ->from('preferences')
@@ -149,7 +117,6 @@ class DownloadListener implements IEventListener {
             $result->closeCursor();
             
             if ($row) {
-                // Calculate new value and update
                 $newValue = (int)$row['configvalue'] + 1;
                 
                 $query = $this->connection->getQueryBuilder();
@@ -164,7 +131,6 @@ class DownloadListener implements IEventListener {
                 
                 $query->executeStatement();
             } else {
-                // Insert new entry
                 $query = $this->connection->getQueryBuilder();
                 $query->insert('preferences')
                     ->values([
@@ -182,7 +148,6 @@ class DownloadListener implements IEventListener {
             }
             
         } catch (\Exception $e) {
-            // Log the error but don't fail
             $this->logger->error('Error logging download in preferences: ' . $e->getMessage(), [
                 'app' => 'transfer_quota_monitor',
                 'exception' => $e

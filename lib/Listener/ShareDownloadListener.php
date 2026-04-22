@@ -14,13 +14,6 @@ use OCP\Files\IRootFolder;
 use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
-/**
- * Listener for share downloads and direct file downloads
- * 
- * This listener tracks downloads for all registered users, including guest accounts,
- * by listening to BeforeFileDownloadedEvent and BeforeShareDownloadedEvent events.
- * It adds the downloaded file size to the user's transfer quota.
- */
 class ShareDownloadListener implements IEventListener {
     /** @var IUserSession */
     private $userSession;
@@ -45,28 +38,25 @@ class ShareDownloadListener implements IEventListener {
         $this->rootFolder = $rootFolder;
         $this->logger = $logger;
     }
-    
+    // not used in our context but could be useful for future features
     public function handle(Event $event): void {
         $this->logger->debug('ShareDownloadListener received event: ' . get_class($event), [
             'app' => 'transfer_quota_monitor'
         ]);
-        
-        // Handle direct file downloads
         if ($event instanceof BeforeFileDownloadedEvent) {
+            $file = $event->getFile();
+            $owner = $file->getOwner();
+            if (!$owner) {
+                return;
+            }
+            $size = $file->getSize();
+            $userId = $owner->getUID();
+            if ($this->quotaService->isQuotaExceeded($userId, $size)) {
+                $this->logger->warning('Direct Download blocked, limit exceeded for ' . $userId);
+                throw new \OCP\Files\StorageNotAvailableException('Impossible');
+            }
+
             try {
-                $file = $event->getFile();
-                $owner = $file->getOwner();
-                
-                if (!$owner) {
-                    $this->logger->debug('No owner found for downloaded file', [
-                        'app' => 'transfer_quota_monitor'
-                    ]);
-                    return;
-                }
-                
-                $size = $file->getSize();
-                $userId = $owner->getUID();
-                
                 $this->logger->info('Direct download tracked: ' . $size . ' bytes for user ' . $userId, [
                     'app' => 'transfer_quota_monitor',
                     'userId' => $userId,
@@ -81,31 +71,24 @@ class ShareDownloadListener implements IEventListener {
                 ]);
             }
         }
-        
-        // Handle public share downloads
         if ($event instanceof BeforeShareDownloadedEvent) {
+            $share = $event->getShare();
+            $node = $share->getNode();
+            
+            if ($node->isDirectory()) {
+                return; 
+            }
+            $owner = $node->getOwner();
+            if (!$owner) {
+                return;
+            }
+            $size = $node->getSize();
+            $userId = $owner->getUID();
+            if ($this->quotaService->isQuotaExceeded($userId, $size)) {
+                $this->logger->warning('Public Share Download blocked, limit exceeded for ' . $userId);
+                throw new \OCP\Files\StorageNotAvailableException('impossible');
+            }
             try {
-                $share = $event->getShare();
-                $node = $share->getNode();
-                
-                if ($node->isDirectory()) {
-                    $this->logger->debug('Shared directory download not tracked', [
-                        'app' => 'transfer_quota_monitor'
-                    ]);
-                    return;
-                }
-                
-                $owner = $node->getOwner();
-                if (!$owner) {
-                    $this->logger->debug('No owner found for shared file', [
-                        'app' => 'transfer_quota_monitor'
-                    ]);
-                    return;
-                }
-                
-                $size = $node->getSize();
-                $userId = $owner->getUID();
-                
                 $this->logger->info('Share download tracked: ' . $size . ' bytes for user ' . $userId, [
                     'app' => 'transfer_quota_monitor',
                     'userId' => $userId,
