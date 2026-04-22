@@ -14,11 +14,6 @@ use OCP\IUserSession;
 use OCP\Preview\BeforePreviewFetchedEvent;
 use Psr\Log\LoggerInterface;
 
-/**
- * Event listener to track file downloads for transfer quota monitoring
- *
- * @template-implements IEventListener<Event|BeforeNodeReadEvent|BeforePreviewFetchedEvent>
- */
 class DownloadListener implements IEventListener {
     /** @var IUserSession */
     protected $userSession;
