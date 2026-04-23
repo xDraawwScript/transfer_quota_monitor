@@ -7,8 +7,7 @@ namespace OCA\TransferQuotaMonitor\Listener;
 use OCA\TransferQuotaMonitor\Service\TransferQuotaService;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
-use OCP\Files\Events\Node\NodeCreatedEvent;
-use OCP\Files\Events\Node\NodeDownloadedEvent;
+use OCP\Files\Events\Node\NodeWrittenEvent;
 use Psr\Log\LoggerInterface;
 
 class FileOperationListener implements IEventListener {
@@ -18,7 +17,6 @@ class FileOperationListener implements IEventListener {
     /** @var LoggerInterface */
     private $logger;
     
-    // To prevent duplicate notifications from the same file operation
     private static $processedNodes = [];
     
     public function __construct(TransferQuotaService $quotaService, LoggerInterface $logger) {
@@ -27,55 +25,34 @@ class FileOperationListener implements IEventListener {
     }
     
     public function handle(Event $event): void {
-        if ($event instanceof NodeDownloadedEvent) {
-            // Track download
+        if ($event instanceof NodeWrittenEvent) {
             $node = $event->getNode();
             $owner = $node->getOwner();
             if ($owner) {
                 $fileId = $node->getId();
                 $userId = $owner->getUID();
+                $size = $node->getSize();
+                // if size is 0 it's likely a metadata update or similar we ignore it to avoid false positives
+                if ($size === 0) {
+                    return;
+                }
+                // avoid tracking the same file multiple times in a short period
+                $key = 'upload-' . $fileId . '-' . $userId . '-' . $size;
                 
-                // Skip if we've already processed this node recently
-                $key = $fileId . '-' . $userId;
+                // if we've already processed this node recently skip it to avoid double counting
                 if (isset(self::$processedNodes[$key])) {
                     return;
                 }
                 
-                // Mark as processed to prevent duplicates
                 self::$processedNodes[$key] = true;
-                
-                // Track the download
-                $size = $node->getSize();
-                $this->logger->debug('Download tracked: ' . $size . ' bytes for user ' . $userId);
-                $this->quotaService->addUserTransfer($userId, $size);
-            }
-        } elseif ($event instanceof NodeCreatedEvent) {
-            // Track upload
-            $node = $event->getNode();
-            $owner = $node->getOwner();
-            if ($owner) {
-                $fileId = $node->getId();
-                $userId = $owner->getUID();
-                
-                // Skip if we've already processed this node recently
-                $key = $fileId . '-' . $userId;
-                if (isset(self::$processedNodes[$key])) {
-                    return;
-                }
-                
-                // Mark as processed to prevent duplicates
-                self::$processedNodes[$key] = true;
-                
-                // Track the upload
-                $size = $node->getSize();
-                $this->logger->debug('Upload tracked: ' . $size . ' bytes for user ' . $userId);
+                $this->logger->info('Upload tracked via NodeWrittenEvent: ' . $size . ' bytes for user ' . $userId, [
+                    'app' => 'transfer_quota_monitor'
+                ]);
                 $this->quotaService->addUserTransfer($userId, $size);
             }
         }
         
-        // Limit the size of the processed nodes cache
         if (count(self::$processedNodes) > 100) {
-            // Only keep the most recent 50 entries
             self::$processedNodes = array_slice(self::$processedNodes, -50, null, true);
         }
     }
