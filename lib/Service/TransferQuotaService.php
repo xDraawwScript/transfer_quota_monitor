@@ -196,19 +196,10 @@ class TransferQuotaService {
         $qb = $this->db->getQueryBuilder();
         
         try {
-            // Update usage with proper type casting for PostgreSQL compatibility
-            $newUsage = $quota['usage'] + $bytes;
-            
-            $qb->update('*PREFIX*transfer_quota_limits')
-               ->set('current_usage', $qb->createNamedParameter((string)$newUsage, \PDO::PARAM_STR))
-               ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
-            
-            $qb->executeStatement();
-            
-            // Check thresholds
-            $this->checkThresholds($userId, $newUsage, $quota['limit']);
-            // $this->updateQuotaReportFile($userId);
-            
+            $sql = "UPDATE *PREFIX*transfer_quota_limits SET current_usage = current_usage + ? WHERE user_id = ?";
+            $this->db->executeStatement($sql, [$bytes, $userId], [\PDO::PARAM_INT, \PDO::PARAM_STR]);
+            $updatedQuota = $this->getUserQuota($userId);
+            $this->checkThresholds($userId, $updatedQuota['usage'], $quota['limit']);
             return true;
         } catch (\Exception $e) {
             $this->logger->error('Error adding user transfer: ' . $e->getMessage(), ['app' => $this->appName, 'exception' => $e]);

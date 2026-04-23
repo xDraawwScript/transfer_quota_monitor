@@ -51,11 +51,6 @@ class DownloadListener implements IEventListener {
                     if ($request->getMethod() === 'PROPFIND') {
                         return;
                     }
-                    // ignore video streaming requests
-                    $range = $request->getHeader('Range');
-                    if (!empty($range) && strpos($range, 'bytes=0-')===false) {
-                        return;
-                    }
                     
                     // anti spam filter to prevent multiple counts for the same download in a short time frame
                     $cache = \OC::$server->get(\OCP\ICacheFactory::class)->createDistributed('transfer_quota');
